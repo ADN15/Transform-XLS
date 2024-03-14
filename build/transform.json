@@ -1,0 +1,27 @@
+{
+    "eula": "",
+    "vendor": "SAP",
+    "license": "",
+    "id": "com.sap.fileTranformWidgetLocalhostTest",
+    "version": "0.0.1",
+    "name": "File Transform Widget Localhost",
+    "newInstancePrefix": "FileTransformWidgetLocalhostTest",
+    "description": "A widget that allows users to upload a file and transform into new format template xls",
+    "imports": [],
+    "webcomponents": [
+        {
+            "kind": "main",
+            "tag": "com-sap-file-upload-widget",
+            "url": "http://localhost:5173/dist/file-upload-widget.iife.js",
+            "integrity": "",
+            "ignoreIntegrity": true
+        },
+        {
+            "kind": "builder",
+            "tag": "com-sap-file-upload-widget-builder",
+            "url": "http://localhost:5173/dist/file-upload-widget.iife.js",
+            "integrity": "",
+            "ignoreIntegrity": true
+        }
+    ]
+}
