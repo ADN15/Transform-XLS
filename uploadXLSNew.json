@@ -1,0 +1,47 @@
+{
+    "eula": "",
+    "vendor": "SAP",
+    "license": "",
+    "id": "com.sap.sample.uploadxlsvalidation2",
+    "version": "1.0.2",
+    "name": "Upload XLS WIth Validation",
+    "newInstancePrefix": "UploadXLSValidation2",
+    "description": "A sample widget that allows users to upload a file include data transform and validation",
+    "imports": ["table", "input-controls","planning","datasource"],
+    "webcomponents": [
+      {
+        "kind": "main",
+        "tag": "com-sap-sample-uploadxlsvalidation2",
+        "url": "/uploadXLSNew.js",
+        "integrity": "",
+        "ignoreIntegrity": true
+      }
+    ],
+    "properties": {  
+    },
+    "methods": {
+      "getData": {
+        "returnType": "Selection[]",
+        "description": "Returns the Data string.",
+        "parameters": [
+          {
+            "name": "sheetName",
+            "type": "string",
+            "description": "Name of sheet to retrieve data for"
+          }
+        ]
+      },  
+      "getSheetNames": {
+        "returnType": "string[]",
+        "description": "Returns the array of worksheet names."        
+      }, 
+      "showFileSelector": {
+         "description": "Displays file selector."
+      }         
+    },
+    "events": {
+      "onFileUpload": {
+        "description": "Called when a file has been successfully uploaded."
+      }
+    }
+  }
