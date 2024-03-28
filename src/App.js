@@ -8,27 +8,40 @@ function App() {
   const [parsedDataString, setParsedDataString] = useState("");
   /* const [selectedRow, setSelectedRow] = useState(null); */
 
+  const getCurrentYear = () => {
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1; // Months are zero-based in JavaScript (January is 0)
+    const currentYear = today.getFullYear();
+
+    return currentMonth <= 3 ? currentYear - 1 : currentYear;
+  }
+
+  const getNextYear = () => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // Months are zero-based in JavaScript (January is 0)
+
+    return currentMonth <= 3 ? currentYear : currentYear + 1;
+  }
+
   const processFileDuplicate = (data) => {
+    const XLSX = require('xlsx');
     const workbook = XLSX.read(data, { type: "binary" });
     const sheetName = workbook.SheetNames[0];
 	  const sheet = workbook.Sheets[sheetName];
     const parsedData = XLSX.utils.sheet_to_json(sheet, {defval: ""});
-
+    console.log("parseData:");
     console.log(parsedData);
 
     const revisedCFY = parsedData[0];
     const revisedAndEstimatedYears = [];
 
-    if (revisedCFY["Estimated NFY"]) {
-        revisedAndEstimatedYears.push(revisedCFY["Revised CFY"]);
-        revisedAndEstimatedYears.push(revisedCFY["Estimated NFY"]);
-    } else {
-        revisedAndEstimatedYears.push(revisedCFY["Revised CFY"]);
-    }
+    revisedAndEstimatedYears.push(getCurrentYear());
+    revisedAndEstimatedYears.push(getNextYear());
 
     // Prepare data for export
-    const exportData = parsedData.slice(2).map((row, rowIndex) => {
-      const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 2, defval: "" })[rowIndex];
+    const exportData = parsedData.slice(1).map((row, rowIndex) => {
+      const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
        // Convert to string and check if it contains a comma
        const revisedCFYString = String(row["Revised CFY"]).replace(",", ""); // Replace comma with dot
        let revisedCFY = parseFloat(revisedCFYString) || 0; // Parse as float or default to 0
@@ -53,12 +66,11 @@ function App() {
 
 
     let extendedExportData = [];
-    if(revisedCFY["Estimated NFY"]){
       // Add the second set of data with NextYear and Estimated NFY
       extendedExportData = [
         ...exportData,
-        ...parsedData.slice(2).map((row, rowIndex) => {
-        const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 2, defval: "" })[rowIndex];
+        ...parsedData.slice(1).map((row, rowIndex) => {
+        const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
         // Convert to string and check if it contains a comma
         const estimatedNFYString = String(row["Estimated NFY"]).replace(",", ""); // Replace comma with dot
         let estimatedNFY = parseFloat(estimatedNFYString) || 0; // Parse as float or default to 0
@@ -80,11 +92,20 @@ function App() {
           };
           })
       ];
-    }else{
-      extendedExportData = [...exportData];
-    }
+    
 
     console.log(extendedExportData);
+
+     // Add custom formatting for headers
+     //const headers = ["Account", "Budget", "MINVIEW", "Version", "Amount", "status"];
+     //extendedExportData.unshift(headers);
+ 
+     //const wsData = extendedExportData.map(row => Object.values(row));
+     //const ws = XLSX.utils.aoa_to_sheet(wsData);
+ 
+     //const wb = XLSX.utils.book_new();
+     //XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+     //XLSX.writeFile(wb, "exported_data.xlsx");
 
     return extendedExportData;
   }
