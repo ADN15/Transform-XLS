@@ -42,25 +42,52 @@ function App() {
     // Prepare data for export
     const exportData = parsedData.slice(1).map((row, rowIndex) => {
       const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
+      
        // Convert to string and check if it contains a comma
        const revisedCFYString = String(row["Revised CFY"]).replace(",", ""); // Replace comma with dot
-       let revisedCFY = parseFloat(revisedCFYString) || 0; // Parse as float or default to 0
+       let revisedCFY = parseFloat(revisedCFYString); // Parse as float
+       console.log("revisedCFY");
+       console.log(revisedCFY);
        let stsCFY = false;
 
        // Validate the amount according to the rules
-       if (revisedCFY < 0 || revisedCFY % 100 !== 0) {
-        revisedCFY = 0; // If negative or not ending with 00, set amount to 0
+       if ( isNaN(revisedCFY) || !/^[0-9]+$/.test(revisedCFY.toString())) {
+        // If not a valid number or not ending with 00, set amount to 0
         stsCFY = true;
-       }
+        revisedCFY = 0;
+        if(revisedCFY < 0 || revisedCFY % 100 !== 0){
+          revisedCFY = 0;
+        }
+      }
+
+      // Convert to string and check if it contains a comma
+      const estimatedNFYString = String(row["Estimated NFY"]).replace(",", ""); // Replace comma with dot
+      let estimatedNFY = parseFloat(estimatedNFYString); // Parse as float 
+      console.log("estimatedNFY");
+      console.log(estimatedNFY);
+      let stsNFY = false;
+      // Validate the amount according to the rules
+      if ( isNaN(estimatedNFY) || !/^[0-9]+$/.test(estimatedNFY.toString())) {
+        // If not a valid number or not ending with 00, set amount to 0
+        stsNFY = true;
+        estimatedNFY = 0;
+        if(estimatedNFY < 0 || estimatedNFY % 100 !== 0){
+          estimatedNFY = 0;
+        }
+      }
+
+      const summary = revisedCFY + estimatedNFY;
 
       return {
-        Account: row.Measures.split(" ")[0],
-        Budget: getMissing["Funding Pot"].split(" ")[0],
+        MINVIEW: getMissing["Ministry View"],
+        Budget: getMissing["Funding Pot"],
+        Account:getMissing["WOG Chart of Accounts"],
+        //Account: row.Measures.split(" ")[0],
         Date: revisedAndEstimatedYears[0],
-        MINVIEW: getMissing["Ministry View"].split(" ")[0],
         Version: "public.Revised",
         Amount: revisedCFY,
-        status: stsCFY
+        Status: stsCFY.toString(),
+        Summary: summary
       };
   });
 
@@ -71,25 +98,53 @@ function App() {
         ...exportData,
         ...parsedData.slice(1).map((row, rowIndex) => {
         const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
+        
+        // Convert to string and check if it contains a comma
+       const revisedCFYString = String(row["Revised CFY"]).replace(",", ""); // Replace comma with dot
+       let revisedCFY = parseFloat(revisedCFYString); // Parse as float
+       console.log("revisedCFY");
+       console.log(revisedCFY);
+       let stsCFY = false;
+
+       // Validate the amount according to the rules
+       if ( isNaN(revisedCFY) || !/^[0-9]+$/.test(revisedCFY.toString())) {
+        // If not a valid number or not ending with 00, set amount to 0
+        stsCFY = true;
+        revisedCFY = 0;
+        if(revisedCFY < 0 || revisedCFY % 100 !== 0){
+          revisedCFY = 0;
+        }
+      }
+
         // Convert to string and check if it contains a comma
         const estimatedNFYString = String(row["Estimated NFY"]).replace(",", ""); // Replace comma with dot
-        let estimatedNFY = parseFloat(estimatedNFYString) || 0; // Parse as float or default to 0
+        let estimatedNFY = parseFloat(estimatedNFYString); // Parse as float 
+        console.log("estimatedNFY");
+        console.log(estimatedNFY);
         let stsNFY = false;
         // Validate the amount according to the rules
-        if (estimatedNFY < 0 || estimatedNFY % 100 !== 0) {
-            estimatedNFY = 0; // If negative or not ending with 00, set amount to 0
-            stsNFY = true;
+        if ( isNaN(estimatedNFY) || !/^[0-9]+$/.test(estimatedNFY.toString())) {
+          // If not a valid number or not ending with 00, set amount to 0
+          stsNFY = true;
+          estimatedNFY = 0;
+          if(estimatedNFY < 0 || estimatedNFY % 100 !== 0){
+            estimatedNFY = 0;
+          }
         }
+
+        const summary = revisedCFY + estimatedNFY;
         
-          return {
-              Account: row.Measures.split(" ")[0],
-              Budget: getMissing["Funding Pot"].split(" ")[0],
+            return {
+              MINVIEW: getMissing["Ministry View"],
+              Budget: getMissing["Funding Pot"],
+              Account:getMissing["WOG Chart of Accounts"],
+              //Account: row.Measures.split(" ")[0],
               Date: revisedAndEstimatedYears[1],
-              MINVIEW: getMissing["Ministry View"].split(" ")[0],
               Version: "public.Estimated",
               Amount: estimatedNFY,
-              status: stsNFY
-          };
+              Status: stsNFY.toString(),
+              Summary: summary
+            };
           })
       ];
     
@@ -97,15 +152,15 @@ function App() {
     console.log(extendedExportData);
 
      // Add custom formatting for headers
-     //const headers = ["Account", "Budget", "MINVIEW", "Version", "Amount", "status"];
-     //extendedExportData.unshift(headers);
+     const headers = ["MINVIEW", "Budget", "Account", "Date", "Version", "Amount", "status", "summary"];
+     extendedExportData.unshift(headers);
  
-     //const wsData = extendedExportData.map(row => Object.values(row));
-     //const ws = XLSX.utils.aoa_to_sheet(wsData);
+     const wsData = extendedExportData.map(row => Object.values(row));
+     const ws = XLSX.utils.aoa_to_sheet(wsData);
  
-     //const wb = XLSX.utils.book_new();
-     //XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-     //XLSX.writeFile(wb, "exported_data.xlsx");
+     const wb = XLSX.utils.book_new();
+     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+     XLSX.writeFile(wb, "exported_data.xlsx");
 
     return extendedExportData;
   }
