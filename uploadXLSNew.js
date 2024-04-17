@@ -162,18 +162,43 @@ var getScriptPromisify = (src) => {
                 //}
 
                 // Prepare data for export
-                var exportData = parsedData.slice(2).map((row, rowIndex) => {
-                    var getMissing = XLSX.utils.sheet_to_json(sheet, { range: 2, defval: "" })[rowIndex];
+                var exportData = parsedData.slice(1).map((row, rowIndex) => {
+                    var getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
                     // Convert to string and check if it contains a comma
                     const revisedCFYString = String(row["Revised CFY"]).replace(",", ""); // Replace comma with empty
-                    let revisedCFY = parseFloat(revisedCFYString) || 0; // Parse as float or default to 0
+                    let revisedCFY = parseFloat(revisedCFYString); // Parse as float
                     let stsCFY = false;
 
                     // Validate the amount according to the rules
-                    if (revisedCFY < 0 || revisedCFY % 100 !== 0) {
-                        revisedCFY = 0; // If negative or not ending with 00, set amount to 0
+                    //if (revisedCFY < 0 || revisedCFY % 100 !== 0) {
+                    //    revisedCFY = 0; // If negative or not ending with 00, set amount to 0
+                    //    stsCFY = true;
+                    //}
+
+                    // Validate the amount according to the rules
+                    if (typeof revisedCFY !== 'number' || isNaN(revisedCFY) || revisedCFY < 0 || revisedCFY % 100 !== 0 || !/^[0-9]+$/.test(revisedCFY.toString())) {
+                        revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
                         stsCFY = true;
                     }
+
+                    // Convert to string and check if it contains a comma
+                    const estimatedNFYString = String(row["Estimated NFY"]).replace(",", ""); // Replace comma with empty
+                    let estimatedNFY = parseFloat(estimatedNFYString); // Parse as float 
+                    let stsNFY = false;
+                    // Validate the amount according to the rules
+                    //if (estimatedNFY < 0 || estimatedNFY % 100 !== 0) {
+                    //    estimatedNFY = 0; // If negative or not ending with 00, set amount to 0
+                    //    stsNFY = true;
+                    //}
+                
+                    // Validate the amount according to the rules
+                    if (typeof estimatedNFY !== 'number' || isNaN(estimatedNFY) || estimatedNFY < 0 || estimatedNFY % 100 !== 0 || !/^[0-9]+$/.test(estimatedNFY.toString())) {
+                        estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0
+                        stsNFY = true;
+                    }
+
+                    const summary = revisedCFY + estimatedNFY;
+
 
                     return {
                             MINVIEW: getMissing["Ministry View"],
@@ -183,7 +208,8 @@ var getScriptPromisify = (src) => {
                             Date: revisedAndEstimatedYears[0],
                             Version: "public.Revised",
                             Amount: revisedCFY,
-                            Status: stsCFY.toString()
+                            Status: stsCFY.toString(),
+                            Summary: summary
                     };
                 });
             
@@ -194,17 +220,41 @@ var getScriptPromisify = (src) => {
                 // Add the second set of data with NextYear and Estimated NFY
                 extendedExportData = [
                     ...exportData,
-                    ...parsedData.slice(2).map((row, rowIndex) => {
-                        const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 2, defval: "" })[rowIndex];
+                    ...parsedData.slice(1).map((row, rowIndex) => {
+                        const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
+                        // Convert to string and check if it contains a comma
+                        const revisedCFYString = String(row["Revised CFY"]).replace(",", ""); // Replace comma with empty
+                        let revisedCFY = parseFloat(revisedCFYString); // Parse as float
+                        let stsCFY = false;
+
+                        // Validate the amount according to the rules
+                        //if (revisedCFY < 0 || revisedCFY % 100 !== 0) {
+                        //    revisedCFY = 0; // If negative or not ending with 00, set amount to 0
+                        //    stsCFY = true;
+                        //}
+
+                        // Validate the amount according to the rules
+                        if (typeof revisedCFY !== 'number' || isNaN(revisedCFY) || revisedCFY < 0 || revisedCFY % 100 !== 0 || !/^[0-9]+$/.test(revisedCFY.toString())) {
+                            revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
+                            stsCFY = true;
+                        }
                         // Convert to string and check if it contains a comma
                         const estimatedNFYString = String(row["Estimated NFY"]).replace(",", ""); // Replace comma with empty
-                        let estimatedNFY = parseFloat(estimatedNFYString) || 0; // Parse as float or default to 0
+                        let estimatedNFY = parseFloat(estimatedNFYString); // Parse as float 
                         let stsNFY = false;
                         // Validate the amount according to the rules
-                        if (estimatedNFY < 0 || estimatedNFY % 100 !== 0) {
-                            estimatedNFY = 0; // If negative or not ending with 00, set amount to 0
+                        //if (estimatedNFY < 0 || estimatedNFY % 100 !== 0) {
+                        //    estimatedNFY = 0; // If negative or not ending with 00, set amount to 0
+                        //    stsNFY = true;
+                        //}
+                    
+                        // Validate the amount according to the rules
+                        if (typeof estimatedNFY !== 'number' || isNaN(estimatedNFY) || estimatedNFY < 0 || estimatedNFY % 100 !== 0 || !/^[0-9]+$/.test(estimatedNFY.toString())) {
+                            estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0
                             stsNFY = true;
                         }
+
+                        const summary = revisedCFY + estimatedNFY;
 
                         return {
                             MINVIEW: getMissing["Ministry View"],
@@ -214,7 +264,8 @@ var getScriptPromisify = (src) => {
                             Date: revisedAndEstimatedYears[1],
                             Version: "public.Estimated",
                             Amount: estimatedNFY,
-                            Status: stsNFY.toString()
+                            Status: stsNFY.toString(),
+                            Summary: summary
                         };
                     })
                 ];
