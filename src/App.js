@@ -54,7 +54,7 @@ function App() {
           //validate to check is cell have value or not ( blank will pass )
           if(revisedCFYString.trim() === ""){
               revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-              stsNFY = true;
+              stsCFY = true;
               reason = "Pass Validation";
           }else{
               revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
