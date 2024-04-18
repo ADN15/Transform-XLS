@@ -45,7 +45,7 @@ function App() {
       // Convert to string and check if it contains a comma
       const revisedCFYString = String(row["Revised-CFY"]).replace(",", ""); // Replace comma with empty
       let  revisedCFY = parseFloat(revisedCFYString); // Parse as float
-      let stsCFY = false
+      let stsCFY = false;
       let reason = "Pass validation";
       let rowNumber = rowIndex + 3
 
@@ -54,24 +54,24 @@ function App() {
           //validate to check is cell have value or not ( blank will pass )
           if(revisedCFYString.trim() === ""){
               revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-              stsNFY = true
+              stsNFY = true;
               reason = "Pass Validation";
           }else{
               revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-              stsCFY = true
+              stsCFY = true;
               reason = "Numeric only";
           }
       }
 
       else if (revisedCFY < 0) {
           revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-          stsCFY = true
+          stsCFY = true;
           reason = "Cannot be negative";
       }
 
       else if (revisedCFY % 100 !== 0 || !/^[0-9]+$/.test(revisedCFY.toString())) {
           revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-          stsCFY = true
+          stsCFY = true;
           reason = "Nearest 100s, No decimal";
       }
 
@@ -110,11 +110,11 @@ function App() {
                 //validate to check is cell have value or not ( blank will pass )
                 if(estimatedNFYString.trim() === ""){
                     estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                    stsNFY = true
+                    stsNFY = true;
                     reason = "Pass Validation";
                 }else{
                     estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0 
-                    stsNFY = true
+                    stsNFY = true;
                     reason = "Numeric only";
                 }
             }
