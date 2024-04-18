@@ -100,7 +100,7 @@ function App() {
             const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
             // Convert to string and check if it contains a comma
             const estimatedNFYString = String(row["Estimated-NFY"]).replace(",", ""); // Replace comma with empty
-            let estimatedNFY = estimatedNFY = parseFloat(estimatedNFYString); // Parse as float;
+            let estimatedNFY =  parseFloat(estimatedNFYString); // Parse as float;
             let stsNFY = false;
             let reason = "Pass Validation";
             let rowNumber = rowIndex + 3
@@ -151,7 +151,7 @@ function App() {
     console.log(extendedExportData);
 
      // Add custom formatting for headers
-     const headers = ["MINVIEW", "Budget", "Account", "Date", "Version", "Amount", "status", "summary"];
+     const headers = ["MINVIEW", "Budget", "Account", "Date", "Version", "Amount", "status", "remark", "row"];
      extendedExportData.unshift(headers);
  
      const wsData = extendedExportData.map(row => Object.values(row));
