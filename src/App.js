@@ -161,6 +161,27 @@ function App() {
      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
      XLSX.writeFile(wb, "exported_data.xlsx");
 
+
+     // Initialize an object to store the summary
+      const summary = {};
+
+      // Iterate through extendedExportData starting from index 1
+      for (let i = 1; i < extendedExportData.length; i++) {
+          const data = extendedExportData[i];
+          const key = `${data.Budget}_${data.Date}`;
+          
+          // If the key doesn't exist in the summary, initialize it with 0
+          if (!summary[key]) {
+              summary[key] = 0;
+          }
+          
+          // Add the Amount to the corresponding summary key
+          summary[key] += data.Amount;
+      }
+
+      // Output the summary
+      console.log(summary);
+
     return extendedExportData;
   }
 
