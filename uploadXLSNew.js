@@ -115,16 +115,46 @@ var getScriptPromisify = (src) => {
         }
 
         async parseExcel(file) {
+
+            // Extract file extension from the file name
+            let extension = '';
+            const fileName = file.name || file.fileName;
+            const dotIndex = fileName.lastIndexOf('.');
+            if (dotIndex !== -1) {
+                extension = fileName.substring(dotIndex + 1).toLowerCase();
+            }
+
+            if (!extension) {
+                console.error('Unsupported file type');
+                return;
+            }
+                    
+            if (extension === 'xlsx') {
+                await getScriptPromisify('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/jszip.js');
+                await getScriptPromisify('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/xlsx.js');
+            } else if (extension === 'xls') {
+                await getScriptPromisify('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js');
+            } else {
+                console.error('Unsupported file type');
+                return;
+            }
             
-            await getScriptPromisify('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/jszip.js');
-            await getScriptPromisify('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/xlsx.js');
+
             const temp = this;
 
             var reader = new FileReader();
 
             reader.onload = function(e) {
                 var data = e.target.result;
-                var workbook = XLSX.read(data, { type: 'binary' });
+                var workbook;
+
+                if (extension === 'xlsx') {
+                    workbook = XLSX.read(data, { type: 'binary' });
+                } else if (extension === 'xls') {
+                    //var arr = String.fromCharCode.apply(null, new Uint8Array(data));
+                    workbook = XLSX.read(data, { type: 'binary' });
+                }
+
                 var sheetNames =[];
                 var sheetData = {};
 
@@ -133,7 +163,8 @@ var getScriptPromisify = (src) => {
                 var currentYear = today.getFullYear();
 
                 workbook.SheetNames.forEach(function(sheetName) {
-                    // Here is your object
+                    console.log("this is sheetname");
+                    console.log(sheetName);
                     var XL_row_object = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName]);
                     var json_object = JSON.stringify(XL_row_object);
                     var rowData = JSON.parse(json_object);
@@ -142,7 +173,11 @@ var getScriptPromisify = (src) => {
                 });
 
                 var sheetName = workbook.SheetNames[0];
+                console.log("this is sheetname getting from SheetNames[0]");
+                console.log(sheetName);
                 var sheet = workbook.Sheets[sheetName];
+                console.log("this is sheet getting from workbook.Sheets[sheetName]");
+                console.log(sheetName);
                 var parsedData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
                 console.log("my code before transform result: ");
                 console.log(parsedData);
@@ -152,6 +187,10 @@ var getScriptPromisify = (src) => {
                 revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear - 1 : currentYear);
                 revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear : currentYear + 1);
 
+                var summaryRevise = 0;
+                var summaryEstimate = 0;
+
+                var tempFundPod = "";
 
                 // Prepare data for export
                 var exportData = parsedData.slice(1).map((row, rowIndex) => {
@@ -159,34 +198,49 @@ var getScriptPromisify = (src) => {
                     // Convert to string and check if it contains a comma
                     const revisedCFYString = String(row["Revised-CFY"]).replace(",", ""); // Replace comma with empty
                     let  revisedCFY = parseFloat(revisedCFYString); // Parse as float
-                    let stsCFY = false
+                    let stsCFY = false;
                     let reason = "Pass validation";
                     let rowNumber = rowIndex + 3
+
+                    //console.log(revisedCFYString);
+                    //console.log(revisedCFY);
 
                     // Validate the amount according to the rules
                     if (typeof revisedCFY !== 'number' || isNaN(revisedCFY)) {
                         //validate to check is cell have value or not ( blank will pass )
-                        if(revisedCFYString.trim() === ""){
+                        if(revisedCFYString === "undefined" || revisedCFYString === ""){
+                            revisedCFY = 0;
+                        }
+                        else{
                             revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                            stsNFY = true
-                            reason = "Pass Validation";
-                        }else{
-                            revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                            stsCFY = true
+                            stsCFY = true;
                             reason = "Numeric only";
                         }
                     }
 
                     else if (revisedCFY < 0) {
                         revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                        stsCFY = true
+                        stsCFY = true;
                         reason = "Cannot be negative";
                     }
 
                     else if (revisedCFY % 100 !== 0 || !/^[0-9]+$/.test(revisedCFY.toString())) {
                         revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                        stsCFY = true
+                        stsCFY = true;
                         reason = "Nearest 100s, No decimal";
+                    }
+
+                    //here's logic for counting summary Revise
+                    if(rowNumber-3 === 0){
+                        tempFundPod = getMissing["Funding Pot"];
+                        summaryRevise = summaryRevise + revisedCFY;
+                    }else{
+                        if(tempFundPod === getMissing["Funding Pot"]){
+                        summaryRevise = summaryRevise + revisedCFY;
+                        }else{
+                        tempFundPod = getMissing["Funding Pot"];
+                        summaryRevise = revisedCFY;
+                        }
                     }
 
                     return {
@@ -199,6 +253,8 @@ var getScriptPromisify = (src) => {
                             Amount: revisedCFY,
                             Status: stsCFY.toString(),
                             Remark: reason,
+                            summaryRevise: summaryRevise,
+                            summaryEstimate: 0,
                             Row:rowNumber
                     };
                 });
@@ -214,7 +270,7 @@ var getScriptPromisify = (src) => {
                         const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
                         // Convert to string and check if it contains a comma
                         const estimatedNFYString = String(row["Estimated-NFY"]).replace(",", ""); // Replace comma with empty
-                        let estimatedNFY = estimatedNFY = parseFloat(estimatedNFYString); // Parse as float;
+                        let estimatedNFY = parseFloat(estimatedNFYString); // Parse as float;
                         let stsNFY = false;
                         let reason = "Pass Validation";
                         let rowNumber = rowIndex + 3
@@ -222,13 +278,12 @@ var getScriptPromisify = (src) => {
                         // Validate the amount according to the rules
                         if (typeof estimatedNFY !== 'number' || isNaN(estimatedNFY)) {
                             //validate to check is cell have value or not ( blank will pass )
-                            if(estimatedNFYString.trim() === ""){
-                                estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                                stsNFY = true
-                                reason = "Pass Validation";
-                            }else{
+                            if(estimatedNFYString === "undefined" || estimatedNFYString === ""){
+                                estimatedNFY = 0;
+                            }
+                            else{
                                 estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0 
-                                stsNFY = true
+                                stsNFY = true;
                                 reason = "Numeric only";
                             }
                         }
@@ -244,6 +299,19 @@ var getScriptPromisify = (src) => {
                             stsNFY = true;
                             reason = "Nearest 100s, No decimal";
                         }
+
+                        //here's logic for counting summary Estimated
+                        if(rowNumber-3 === 0){
+                            tempFundPod = getMissing["Funding Pot"];
+                            summaryEstimate = summaryEstimate + estimatedNFY;
+                        }else{
+                            if(tempFundPod === getMissing["Funding Pot"]){
+                                summaryEstimate = summaryEstimate + estimatedNFY;
+                            }else{
+                                tempFundPod = getMissing["Funding Pot"];
+                                summaryEstimate = estimatedNFY;
+                            }
+                        }
                         
 
                         return {
@@ -256,6 +324,8 @@ var getScriptPromisify = (src) => {
                             Amount: estimatedNFY,
                             Status: stsNFY.toString(),
                             Remark: reason,
+                            summaryRevise: 0,
+                            summaryEstimate: summaryEstimate,
                             Row:rowNumber
                         };
                     })
@@ -264,10 +334,19 @@ var getScriptPromisify = (src) => {
                 //    extendedExportData = [...exportData];
                 //}
 
+                var tempSheetName = 'Drawdown_Table';
+
+                //manualy add data
+                sheetNames.push(tempSheetName);
+                sheetData[tempSheetName]=extendedExportData;
+
                 sheetNames.push(sheetName);
                 sheetData[sheetName]=extendedExportData;
-                console.log("after transform result: ");
 
+                console.log("showing all sheetData[]");
+                console.log(sheetData);
+
+                console.log("after transform result: ");
                 console.log(extendedExportData);
 
                 temp.setData(sheetData);
@@ -282,8 +361,6 @@ var getScriptPromisify = (src) => {
       
             reader.readAsBinaryString(file);
         }
-       
-
 
     //events
 
