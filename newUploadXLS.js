@@ -158,6 +158,8 @@ var getScriptPromisify = (src) => {
 
                 const a1Value = sheet['A1'] ? sheet['A1'].v : null;
 
+                const Yr = sheet['C7'] ? sheet['C7'].v : currentYear;
+
                 try{
                     if (a1Value !== "iBudget3InputFile") {
                     console.log("❌ Error: The file is not valid.");
@@ -214,7 +216,7 @@ var getScriptPromisify = (src) => {
                             Budget: getMissing["Funding Pot"],
                             Account:getMissing["Account"],
                             //Account: row.Measures.split(" ")[0],
-                            Date: revisedAndEstimatedYears[0],
+                            Date: Yr,
                             Version: "public.Revised",
                             Amount: revisedCFY,
                             //Status: stsCFY.toString(),
@@ -264,7 +266,7 @@ var getScriptPromisify = (src) => {
                             Budget: getMissing["Funding Pot"],
                             Account:getMissing["Account"],
                             //Account: row.Measures.split(" ")[0],
-                            Date: revisedAndEstimatedYears[1],
+                            Date: Yr+1,
                             Version: "public.Estimated",
                             Amount: estimatedNFY,
                             //Status: stsNFY.toString(),
