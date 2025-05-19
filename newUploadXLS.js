@@ -117,7 +117,6 @@ var getScriptPromisify = (src) => {
             
             await getScriptPromisify('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
             const XLSX = window.XLSX;
-            //await getScriptPromisify('https://cdn.sheetjs.com/xlsx-0.20.0/package/jszip.min.js');
             const temp = this;
 
             var reader = new FileReader();
@@ -156,6 +155,19 @@ var getScriptPromisify = (src) => {
                 var sheetName = workbook.SheetNames[0];
                 console.log("sheet Name : "+sheetName);
                 var sheet = workbook.Sheets[sheetName];
+
+                const a1Value = sheet['A1'] ? sheet['A1'].v : null;
+
+                try{
+                    if (a1Value !== "iBudget3InputFile") {
+                    console.log("❌ Error: The file is not valid.");
+                    alert("❌ Error: The file is not valid.");
+                    throw new Error("❌ Invalid file");
+                }
+                }catch(err){
+                    console.error(err);
+                }
+
                 var parsedData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
                 console.log("my code before transform result: ");
                 console.log(parsedData);
@@ -165,28 +177,18 @@ var getScriptPromisify = (src) => {
                 revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear - 1 : currentYear);
                 revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear : currentYear + 1);
 
-                //if (revisedCFY["Estimated NFY"]) {
-                //    revisedAndEstimatedYears.push(revisedCFY["Revised CFY"]);
-                //    revisedAndEstimatedYears.push(revisedCFY["Estimated NFY"]);
-                //} else {
-                //    revisedAndEstimatedYears.push(revisedCFY["Revised CFY"]);
-                //}
-
                 // Prepare data for export
-                var exportData = parsedData.slice(1).map((row, rowIndex) => {
-                    var getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
+                //getting exl data from row number 11 as header 
+                var exportData = parsedData.slice(10).map((row, rowIndex) => {
+                    //starting getting data from row number 12
+                    var getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
                     // Convert to string and check if it contains a comma
-                    const revisedCFYString = String(row["Revised-CFY"]).replace(",", ""); // Replace comma with empty
+                    const revisedCFYString = String(row["Revised CFY"]).replace(",", ""); // Replace comma with empty
                     let revisedCFY = parseFloat(revisedCFYString); // Parse as float or default to 0
+
                     let stsCFY = false
                     let reason = "Pass Validation";
-                    let rowNumber = rowIndex + 3
-
-                    // Validate the amount according to the rules
-                    //if (revisedCFY < 0 || revisedCFY % 100 !== 0) {
-                    //    revisedCFY = 0; // If negative or not ending with 00, set amount to 0
-                    //    stsCFY = true;
-                    //}
+                    let rowNumber = rowIndex + 12
 
                     // Validate the amount according to the rules
                     if (typeof revisedCFY !== 'number' || isNaN(revisedCFY)) {
@@ -208,40 +210,34 @@ var getScriptPromisify = (src) => {
                     }
 
                     return {
-                            MINVIEW: getMissing["Cost Centre"],
+                            MINVIEW: getMissing["CC"],
                             Budget: getMissing["Funding Pot"],
-                            Account:getMissing["Accounts"],
+                            Account:getMissing["Account"],
                             //Account: row.Measures.split(" ")[0],
                             Date: revisedAndEstimatedYears[0],
                             Version: "public.Revised",
                             Amount: revisedCFY,
-                            Status: stsCFY.toString(),
-                            Remark: reason,
-                            Row:rowNumber
+                            //Status: stsCFY.toString(),
+                            //Remark: reason,
+                            //Row:rowNumber
                     };
                 });
             
             
                 // Add the second set of data with NextYear and Estimated NFY
                 let extendedExportData = [];
-                //if(revisedCFY["Estimated NFY"]){
+
                 // Add the second set of data with NextYear and Estimated NFY
                 extendedExportData = [
                     ...exportData,
-                    ...parsedData.slice(1).map((row, rowIndex) => {
-                        const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
+                    ...parsedData.slice(10).map((row, rowIndex) => {
+                        const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
                         // Convert to string and check if it contains a comma
-                        const estimatedNFYString = String(row["Estimated-NFY"]).replace(",", ""); // Replace comma with empty
+                        const estimatedNFYString = String(row["Estimated NFY"]).replace(",", ""); // Replace comma with empty
                         let estimatedNFY = parseFloat(estimatedNFYString); // Parse as float or default to 0
                         let stsNFY = false;
                         let reason = "Pass Validation"
-                        let rowNumber = rowIndex + 3
-
-                        // Validate the amount according to the rules
-                        //if (estimatedNFY < 0 || estimatedNFY % 100 !== 0) {
-                        //    estimatedNFY = 0; // If negative or not ending with 00, set amount to 0
-                        //    stsNFY = true;
-                        //}
+                        let rowNumber = rowIndex + 12
                     
                         // Validate the amount according to the rules
                         if (typeof estimatedNFY !== 'number' || isNaN(estimatedNFY)) {
@@ -264,22 +260,19 @@ var getScriptPromisify = (src) => {
 
 
                         return {
-                            MINVIEW: getMissing["Cost Centre"],
+                            MINVIEW: getMissing["CC"],
                             Budget: getMissing["Funding Pot"],
-                            Account:getMissing["Accounts"],
+                            Account:getMissing["Account"],
                             //Account: row.Measures.split(" ")[0],
                             Date: revisedAndEstimatedYears[1],
                             Version: "public.Estimated",
                             Amount: estimatedNFY,
-                            Status: stsNFY.toString(),
-                            Remark: reason,
-                            Row:rowNumber
+                            //Status: stsNFY.toString(),
+                            //Remark: reason,
+                            //Row:rowNumber
                         };
                     })
                 ];
-                //}else{
-                //    extendedExportData = [...exportData];
-                //}
 
                 sheetNames.push(sheetName);
                 sheetData[sheetName]=extendedExportData;
