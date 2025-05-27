@@ -160,73 +160,70 @@ var getScriptPromisify = (src) => {
 
                 const Yr = sheet['C7'] ? sheet['C7'].v : currentYear;
 
-                try{
-                    if (a1Value !== "iBudget3InputFile") {
+                if (a1Value !== "iBudget3InputFile") {
                     console.log("Error: The file is not valid ❌");
-                    alert("Error: The file is not valid ❌");
-                    throw new Error("Invalid file");
-                }
-                }catch(err){
-                    console.error(err);
-                }
+                    return;
+                }else{
+                    var parsedData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                    console.log("my code before transform result: ");
+                    console.log(parsedData);
 
-                var parsedData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-                console.log("my code before transform result: ");
-                console.log(parsedData);
+                    //var revisedCFY = parsedData[0];
+                    var revisedAndEstimatedYears = [];
+                    revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear - 1 : currentYear);
+                    revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear : currentYear + 1);
 
-                var revisedCFY = parsedData[0];
-                var revisedAndEstimatedYears = [];
-                revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear - 1 : currentYear);
-                revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear : currentYear + 1);
-
-                // Prepare data for export
-                //getting exl data from row number 11 as header 
-                var exportData = parsedData.slice(10).map((row, rowIndex) => {
-                    //starting getting data from row number 12
-                    var getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
-                    // Convert to string and check if it contains a comma
-                    const revisedCFYString = String(row["Revised CFY"]).replace(",", ""); // Replace comma with empty
-                    let revisedCFY = parseFloat(revisedCFYString); // Parse as float or default to 0
-
-                    return {
-                            MINVIEW: getMissing["CC"],
-                            Budget: getMissing["Funding Pot"],
-                            Account:getMissing["Account"],
-                            Date: Yr,
-                            Version: "public.Revised",
-                            Amount: revisedCFY
-                    };
-                });
-            
-            
-                // Add the second set of data with NextYear and Estimated NFY
-                let extendedExportData = [];
-
-                // Add the second set of data with NextYear and Estimated NFY
-                extendedExportData = [
-                    ...exportData,
-                    ...parsedData.slice(10).map((row, rowIndex) => {
-                        const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
+                    // Prepare data for export
+                    //getting exl data from row number 11 as header 
+                    var exportData = parsedData.slice(10).map((row, rowIndex) => {
+                        //starting getting data from row number 12
+                        var getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
                         // Convert to string and check if it contains a comma
-                        const estimatedNFYString = String(row["Estimated NFY"]).replace(",", ""); // Replace comma with empty
-                        let estimatedNFY = parseFloat(estimatedNFYString); // Parse as float or default to 0
-                        
+                        const revisedCFYString = String(row["Revised CFY"]).replace(",", ""); // Replace comma with empty
+                        let revisedCFY = parseFloat(revisedCFYString); // Parse as float or default to 0
+
                         return {
-                            MINVIEW: getMissing["CC"],
-                            Budget: getMissing["Funding Pot"],
-                            Account:getMissing["Account"],
-                            Date: Yr+1,
-                            Version: "public.Estimated",
-                            Amount: estimatedNFY
+                                MINVIEW: getMissing["CC"],
+                                Budget: getMissing["Funding Pot"],
+                                Account:getMissing["Account"],
+                                Date: Yr,
+                                Version: "public.Revised",
+                                Amount: revisedCFY
                         };
-                    })
-                ];
+                    });
+                
+                
+                    // Add the second set of data with NextYear and Estimated NFY
+                    let extendedExportData = [];
 
-                sheetNames.push(sheetName);
-                sheetData[sheetName]=extendedExportData;
-                console.log("after transform result: ");
+                    // Add the second set of data with NextYear and Estimated NFY
+                    extendedExportData = [
+                        ...exportData,
+                        ...parsedData.slice(10).map((row, rowIndex) => {
+                            const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
+                            // Convert to string and check if it contains a comma
+                            const estimatedNFYString = String(row["Estimated NFY"]).replace(",", ""); // Replace comma with empty
+                            let estimatedNFY = parseFloat(estimatedNFYString); // Parse as float or default to 0
+                            
+                            return {
+                                MINVIEW: getMissing["CC"],
+                                Budget: getMissing["Funding Pot"],
+                                Account:getMissing["Account"],
+                                Date: Yr+1,
+                                Version: "public.Estimated",
+                                Amount: estimatedNFY
+                            };
+                        })
+                    ];
 
-                console.log(extendedExportData);
+                    sheetNames.push(sheetName);
+                    sheetData[sheetName]=extendedExportData;
+                    console.log("after transform result: ");
+
+                    console.log(extendedExportData);
+                }
+
+                
 
                 temp.setData(sheetData);
                 temp.setNames(sheetNames);

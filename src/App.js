@@ -9,176 +9,136 @@ function App() {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     const reader = new FileReader();
+
     reader.onload = (e) => {
       const data = e.target.result;
-      let workbook;
-      if (file.name.endsWith('.xls')) {
-        workbook = XLSX.read(data, { type: "binary" });
-      } else if (file.name.endsWith('.xlsx')) {
-        workbook = XLSX.read(data, { type: "binary" });
-      } else {
-        // Handle unsupported file format
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      const supportedFormats = ['xls', 'xlsx', 'xlsm'];
+
+      if (!supportedFormats.includes(fileExtension)) {
         console.error("Unsupported file format");
         return;
       }
 
-      workbook.SheetNames.forEach(function(sheetName) {
-          // Here is your object
-          console.log("this is sheetname");
-          console.log(sheetName);
-          var XL_row_object = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName]);
-          var json_object = JSON.stringify(XL_row_object);
-          var rowData = JSON.parse(json_object);
-          console.log("currently code result: ");
-          console.log(rowData);
-      });
+      const workbook = XLSX.read(data, { type: "binary" });
+      const sheetName = "BudgetDrawdown";
 
-      const sheetName = workbook.SheetNames[0];
-      console.log("this is sheetname getting from SheetNames[0]");
-      console.log(sheetName);
+      if (!workbook.SheetNames.includes(sheetName)) {
+        alert(`Sheet "${sheetName}" tidak ditemukan dalam file Excel.`);
+        return;
+      }
+
       const sheet = workbook.Sheets[sheetName];
-      console.log("this is sheet getting from workbook.Sheets[sheetName]");
-      console.log(sheetName);
-      const parsedData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-      console.log("my code before transform result: ");
+      const range = XLSX.utils.decode_range(sheet['!ref']); // ✅ get range
+      //const rawParsedData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      // ✅ Filter visually non-empty rows starting from Excel row 12
+     const parsedData = [];
+      const startRow = 11; // 0-based index for Excel row 12
+      let rowCount = 0;
+
+      for (let r = startRow; r <= range.e.r; r++) {
+        let hasData = false;
+
+        for (let c = range.s.c; c <= range.e.c; c++) {
+          const cellAddress = XLSX.utils.encode_cell({ r, c });
+          const cell = sheet[cellAddress];
+
+          if (cell && cell.v !== undefined && cell.v !== null && cell.v !== "") {
+            hasData = true;
+            break;
+          }
+        }
+
+        if (hasData) {
+          const rowJson = XLSX.utils.sheet_to_json(sheet, {
+            range: { s: { r, c: range.s.c }, e: { r, c: range.e.c } },
+            header: 1,
+            defval: "",
+          })[0];
+
+          // Convert array row to object using headers (assumes headers at row 11)
+          const headers = XLSX.utils.sheet_to_json(sheet, {
+            range: 10,
+            header: 1,
+            defval: "",
+          })[0];
+
+          const rowObj = {};
+          headers.forEach((key, i) => {
+            rowObj[key] = rowJson[i] ?? "";
+          });
+
+          parsedData.push(rowObj);
+          rowCount++;
+        } else {
+          break; // stop at first visually blank row
+        }
+      }
+
+      console.log(`Found ${rowCount} rows with data starting from row 12.`);
+
+      console.log("Filtered parsedData (non-blank rows from row 12):");
       console.log(parsedData);
 
-      var sheetNames =[];
-      console.log("declare new var sheetNames[]");
-      console.log(sheetNames);
-      var sheetData = {};
-
+      const a1Value = sheet['A1'] ? sheet['A1'].v : null;
       const today = new Date();
-      const currentMonth = today.getMonth() + 1; // Months are zero-based in JavaScript (January is 0)
-      const currentYear = today.getFullYear();
+      const Yr = sheet['C7'] ? sheet['C7'].v : today.getFullYear();
 
-      const revisedAndEstimatedYears = [
-          currentMonth <= 3 ? currentYear - 1 : currentYear,
-          currentMonth <= 3 ? currentYear : currentYear + 1
-      ];
+      if (a1Value !== "iBudget3InputFile") {
+        console.log("Error: The file is not valid ❌");
+        alert("Error: The file is not valid ❌");
+        return;
+      }
 
-      let summaryRevise = 0;
-      let summaryEstimate = 0;
-      let tempFundPod = "";
+      let sheetData = {};
+      let sheetNames = [];
 
-      const exportData = parsedData.slice(1).map((row, rowIndex) => {
-        const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
-        const revisedCFYString = String(row["Revised-CFY"]).replace(",", "");
+      const exportData = parsedData.slice(10).map((row, rowIndex) => {
+        const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
+        const revisedCFYString = String(row["Revised CFY"]).replace(",", "");
         let revisedCFY = parseFloat(revisedCFYString);
-        let stsCFY = false;
-        let reason = "Pass validation";
-        let rowNumber = rowIndex + 3;
-
-        if (typeof revisedCFY !== 'number' || isNaN(revisedCFY)) {
-          if (revisedCFYString === "undefined" || revisedCFYString === "") {
-              revisedCFY = 0;
-          } else {
-              revisedCFY = 0;
-              stsCFY = true;
-              reason = "Numeric only";
-          }
-      } else if (revisedCFY < 0 || revisedCFY % 100 !== 0 || !/^[0-9]+$/.test(revisedCFY.toString())) {
-          revisedCFY = 0;
-          stsCFY = true;
-          reason = revisedCFY < 0 ? "Cannot be negative" : "Nearest 100s, No decimal";
-      }
-
-      if (rowNumber === 3) {
-          tempFundPod = getMissing["Funding Pot"];
-          summaryRevise += revisedCFY;
-      } else {
-          if (tempFundPod === getMissing["Funding Pot"]) {
-              summaryRevise += revisedCFY;
-          } else {
-              tempFundPod = getMissing["Funding Pot"];
-              summaryRevise = revisedCFY;
-          }
-      }
 
         return {
-          MINVIEW: getMissing["Cost Centre"],
+          MINVIEW: getMissing["CC"],
           Budget: getMissing["Funding Pot"],
           Account: getMissing["Accounts"],
-          Date: revisedAndEstimatedYears[0],
+          Date: Yr,
           Version: "public.Revised",
-          Amount: revisedCFY,
-          Status: stsCFY.toString(),
-          Remark: reason,
-          summaryRevise: summaryRevise,
-          summaryEstimate: 0,
-          Row: rowNumber
+          Amount: revisedCFY
         };
       });
 
-      let extendedExportData = [
+      const extendedExportData = [
         ...exportData,
-        ...parsedData.slice(1).map((row, rowIndex) => {
-          const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: "" })[rowIndex];
-          const estimatedNFYString = String(row["Estimated-NFY"]).replace(",", "");
+        ...parsedData.slice(10).map((row, rowIndex) => {
+          const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
+          const estimatedNFYString = String(row["Estimated NFY"]).replace(",", "");
           let estimatedNFY = parseFloat(estimatedNFYString);
-          let stsNFY = false;
-          let reason = "Pass Validation";
-          let rowNumber = rowIndex + 3;
-
-          if (typeof estimatedNFY !== 'number' || isNaN(estimatedNFY)) {
-            if (estimatedNFYString === "undefined" || estimatedNFYString === "") {
-                estimatedNFY = 0;
-            } else {
-                estimatedNFY = 0;
-                stsNFY = true;
-                reason = "Numeric only";
-            }
-          } else if (estimatedNFY < 0 || estimatedNFY % 100 !== 0 || !/^[0-9]+$/.test(estimatedNFY.toString())) {
-              estimatedNFY = 0;
-              stsNFY = true;
-              reason = estimatedNFY < 0 ? "Cannot be negative" : "Nearest 100s, No decimal";
-          }
-
-          if (rowNumber === 3) {
-              tempFundPod = getMissing["Funding Pot"];
-              summaryEstimate += estimatedNFY;
-          } else {
-              if (tempFundPod === getMissing["Funding Pot"]) {
-                  summaryEstimate += estimatedNFY;
-              } else {
-                  tempFundPod = getMissing["Funding Pot"];
-                  summaryEstimate = estimatedNFY;
-              }
-          }
 
           return {
-            MINVIEW: getMissing["Cost Centre"],
+            MINVIEW: getMissing["CC"],
             Budget: getMissing["Funding Pot"],
             Account: getMissing["Accounts"],
-            Date: revisedAndEstimatedYears[1],
+            Date: Yr + 1,
             Version: "public.Estimated",
-            Amount: estimatedNFY,
-            Status: stsNFY.toString(),
-            Remark: reason,
-            summaryRevise: 0,
-            summaryEstimate: summaryEstimate,
-            Row: rowNumber
+            Amount: estimatedNFY
           };
         })
       ];
 
-      var tempSheetName = 'Drawdown_Table';
+      const tempSheetName = 'Drawdown_Table';
 
-      //manualy add data
       sheetNames.push(tempSheetName);
-      sheetData[tempSheetName]=extendedExportData;
+      sheetData[tempSheetName] = extendedExportData;
 
-      console.log("disini mau push sheetNames.push(sheetName)");
-      console.log(sheetName);
       sheetNames.push(sheetName);
-      sheetData[sheetName]=extendedExportData;
+      sheetData[sheetName] = extendedExportData;
 
-      console.log("showing all sheetData[]");
-      console.log(sheetData);
+      console.log("Final transformed data:");
+      console.log(extendedExportData);
 
       setData(extendedExportData);
-      console.log("after transform result: ");
-      console.log(extendedExportData);
     };
 
     reader.readAsBinaryString(file);
@@ -188,7 +148,7 @@ function App() {
     <div className="App">
       <input
         type="file"
-        accept=".xlsx, .xls"
+        accept=".xlsx, .xls, .xlsm"
         onChange={handleFileUpload}
       />
 
@@ -203,11 +163,6 @@ function App() {
               <th>Date</th>
               <th>Version</th>
               <th>Amount</th>
-              <th>Status</th>
-              <th>Remark</th>
-              <th>Summary Revise</th>
-              <th>Summary Estimate</th>
-              <th>Row</th>
             </tr>
           </thead>
           <tbody>
@@ -219,11 +174,6 @@ function App() {
                 <td>{row.Date}</td>
                 <td>{row.Version}</td>
                 <td>{row.Amount}</td>
-                <td>{row.Status}</td>
-                <td>{row.Remark}</td>
-                <td>{row.summaryRevise}</td>
-                <td>{row.summaryEstimate}</td>
-                <td>{row.Row}</td>
               </tr>
             ))}
           </tbody>
