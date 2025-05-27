@@ -131,30 +131,35 @@ var getScriptPromisify = (src) => {
                     bookVBA: true  // âœ… this is the key!
                 });
 
-                var sheetNames =[];
-                var sheetData = {};
-
-                var today = new Date();
-                var currentMonth = today.getMonth() + 1; // Months are zero-based in JavaScript (January is 0)
-                var currentYear = today.getFullYear();
-
-                // updated macro detection
+                const sheetNames = [];
+                const sheetData = {};
+                
+                const today = new Date();
+                const currentMonth = today.getMonth() + 1; // Months are zero-based
+                const currentYear = today.getFullYear();
+                
+                // ✅ Detect macros (XLSM)
                 const hasMacros = !!(workbook.vbaraw || workbook.vbaProject);
-
-                console.log(hasMacros ? "âœ… This workbook contains macros." : "âŒ This workbook does NOT contain macros.");
-
-                workbook.SheetNames.forEach(function(sheetName) {
-                    // Here is your object
-                    var XL_row_object = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName]);
-                    var json_object = JSON.stringify(XL_row_object);
-                    var rowData = JSON.parse(json_object);
-                    console.log("currently code result: ");
-                    console.log(rowData);
-                });
-
-                var sheetName = workbook.SheetNames[0];
-                console.log("sheet Name : "+sheetName);
-                var sheet = workbook.Sheets[sheetName];
+                console.log(hasMacros ? "✅ This workbook contains macros." : "❌ This workbook does NOT contain macros.");
+                
+                // ✅ Only process if "BudgetDrawdown" sheet exists
+                const targetSheetName = "BudgetDrawdown";
+                
+                if (workbook.SheetNames.includes(targetSheetName)) {
+                  const sheet = workbook.Sheets[targetSheetName];
+                
+                  const XL_row_object = XLSX.utils.sheet_to_row_object_array(sheet);
+                  const json_object = JSON.stringify(XL_row_object);
+                  const rowData = JSON.parse(json_object);
+                
+                  console.log(`Data from "${targetSheetName}" sheet:`);
+                  console.log(rowData);
+                
+                  sheetNames.push(targetSheetName);
+                  sheetData[targetSheetName] = rowData;
+                } else {
+                  console.log(`❌ Sheet "${targetSheetName}" not found. Skipping processing.`);
+                }
 
                 const a1Value = sheet['A1'] ? sheet['A1'].v : null;
 
