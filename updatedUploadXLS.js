@@ -188,29 +188,6 @@ var getScriptPromisify = (src) => {
                     const revisedCFYString = String(row["Revised CFY"]).replace(",", ""); // Replace comma with empty
                     let revisedCFY = parseFloat(revisedCFYString); // Parse as float or default to 0
 
-                    let stsCFY = false
-                    let reason = "Pass Validation";
-                    let rowNumber = rowIndex + 12
-
-                    // Validate the amount according to the rules
-                    if (typeof revisedCFY !== 'number' || isNaN(revisedCFY)) {
-                        revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                        stsCFY = true
-                        reason = "Numeric only";
-                    }
-
-                    else if (revisedCFY < 0) {
-                        revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                        stsCFY = true
-                        reason = "Cannot be negative";
-                    }
-
-                    else if (revisedCFY % 100 !== 0 || !/^[0-9]+$/.test(revisedCFY.toString())) {
-                        revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                        stsCFY = true
-                        reason = "Nearest 100s, No decimal";
-                    }
-
                     return {
                             MINVIEW: getMissing["CC"],
                             Budget: getMissing["Funding Pot"],
@@ -233,30 +210,7 @@ var getScriptPromisify = (src) => {
                         // Convert to string and check if it contains a comma
                         const estimatedNFYString = String(row["Estimated NFY"]).replace(",", ""); // Replace comma with empty
                         let estimatedNFY = parseFloat(estimatedNFYString); // Parse as float or default to 0
-                        let stsNFY = false;
-                        let reason = "Pass Validation"
-                        let rowNumber = rowIndex + 12
-                    
-                        // Validate the amount according to the rules
-                        if (typeof estimatedNFY !== 'number' || isNaN(estimatedNFY)) {
-                            estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                            stsNFY = true
-                            reason = "Numeric only";
-                        }
-
-                        else if (estimatedNFY < 0 ) {
-                            estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                            stsNFY = true;
-                            reason = "Cannot be negative";
-                        }
-
-                        else if (estimatedNFY % 100 !== 0 || !/^[0-9]+$/.test(estimatedNFY.toString())) {
-                            estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                            stsNFY = true;
-                            reason = "Nearest 100s, No decimal";
-                        }
-
-
+                        
                         return {
                             MINVIEW: getMissing["CC"],
                             Budget: getMissing["Funding Pot"],

@@ -161,17 +161,6 @@ function App() {
           };
         })
       ];
-      /*
-      const headers = ["MINVIEW", "Budget", "Account", "Date", "Version", "Amount", "status", "remark", "summary revise", "summary estimate", "row"];
-      extendedExportData.unshift(headers);
-
-      const wsData = extendedExportData.map(row => Object.values(row));
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-      XLSX.writeFile(wb, "exported_data.xlsx");
-      */
 
       var tempSheetName = 'Drawdown_Table';
 
