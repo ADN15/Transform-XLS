@@ -114,186 +114,134 @@ var getScriptPromisify = (src) => {
         }
 
         async parseExcel(file) {
-            
-            await getScriptPromisify('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
-            const XLSX = window.XLSX;
-            const temp = this;
+          await getScriptPromisify('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
+          const XLSX = window.XLSX;
+          const temp = this;
+        
+          var reader = new FileReader();
+        
+          reader.onload = function(e) {
+            const data = e.target.result;
+            const workbook = XLSX.read(data, {
+              type: 'array',
+              cellDates: true,
+              cellNF: false,
+              cellText: false,
+              bookVBA: true // ✅ this is the key!
+            });
+        
+            const sheetNames = [];
+            const sheetData = {};
+            const today = new Date();
+            const currentMonth = today.getMonth() + 1;
+            const currentYear = today.getFullYear();
+        
+            // ✅ Check for macros
+            const hasMacros = !!(workbook.vbaraw || workbook.vbaProject);
+            console.log(hasMacros ? "✅ This workbook contains macros." : "❌ This workbook does NOT contain macros.");
+        
+            const targetSheetName = "BudgetDrawdown";
+        
+            // Declare sheet outside if-block
+            let sheet = null;
+        
+            if (workbook.SheetNames.includes(targetSheetName)) {
+              sheet = workbook.Sheets[targetSheetName];
+        
+              const XL_row_object = XLSX.utils.sheet_to_row_object_array(sheet);
+              const json_object = JSON.stringify(XL_row_object);
+              const rowData = JSON.parse(json_object);
+        
+              console.log(`Data from "${targetSheetName}" sheet:`);
+              console.log(rowData);
+            } else {
+              console.log(`❌ Sheet "${targetSheetName}" not found. Skipping processing.`);
+              return; // 🚫 Stop execution if sheet doesn't exist
+            }
+        
+            const a1Value = sheet['A1'] ? sheet['A1'].v : null;
+            const Yr = currentYear;
+        
+            if (a1Value !== "iBudget3UploadFile") {
+              console.log("❌ Error: The file is not valid");
+              return;
+            } else {
+              const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
-            var reader = new FileReader();
+              // Row 0: Excel native headers (ignored)
+              // Row 1: Actual custom headers like ["CC", "Funding Pot", "Account", "Revised CFY", "Estimated NFY"]
+              const headerRow = rawData[1];
 
-            reader.onload = function(e) {
-                var data = e.target.result;
-                var workbook = XLSX.read(data, {
-                    type: 'array',
-                    cellDates: true,
-                    cellNF: false,
-                    cellText: false,
-                    bookVBA: true  // ✅ this is the key!
+              // Remaining rows: actual data
+              const dataRows = rawData.slice(2);
+
+              // Now transform each row into an object using the headerRow
+              const parsedData = dataRows.map((row) => {
+                const obj = {};
+                headerRow.forEach((header, i) => {
+                  obj[header] = row[i];
                 });
+                return obj;
+              });
+              console.log("raw data before transform :");
+              console.log(parsedData);
+        
+              const revisedAndEstimatedYears = [];
+              revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear - 1 : currentYear);
+              revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear : currentYear + 1);
 
-                var sheetNames =[];
-                var sheetData = {};
-
-                var today = new Date();
-                var currentMonth = today.getMonth() + 1; // Months are zero-based in JavaScript (January is 0)
-                var currentYear = today.getFullYear();
-
-                // updated macro detection
-                const hasMacros = !!(workbook.vbaraw || workbook.vbaProject);
-
-                console.log(hasMacros ? "✅ This workbook contains macros." : "❌ This workbook does NOT contain macros.");
-
-                workbook.SheetNames.forEach(function(sheetName) {
-                    // Here is your object
-                    var XL_row_object = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName]);
-                    var json_object = JSON.stringify(XL_row_object);
-                    var rowData = JSON.parse(json_object);
-                    console.log("currently code result: ");
-                    console.log(rowData);
-                });
-
-                var sheetName = workbook.SheetNames[0];
-                console.log("sheet Name : "+sheetName);
-                var sheet = workbook.Sheets[sheetName];
-
-                const a1Value = sheet['A1'] ? sheet['A1'].v : null;
-
-                const Yr = sheet['C7'] ? sheet['C7'].v : currentYear;
-
-                try{
-                    if (a1Value !== "iBudget3InputFile") {
-                    console.log("❌ Error: The file is not valid.");
-                    alert("❌ Error: The file is not valid.");
-                    throw new Error("❌ Invalid file");
-                }
-                }catch(err){
-                    console.error(err);
-                }
-
-                var parsedData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-                console.log("my code before transform result: ");
-                console.log(parsedData);
-
-                var revisedCFY = parsedData[0];
-                var revisedAndEstimatedYears = [];
-                revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear - 1 : currentYear);
-                revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear : currentYear + 1);
-
-                // Prepare data for export
-                //getting exl data from row number 11 as header 
-                var exportData = parsedData.slice(10).map((row, rowIndex) => {
-                    //starting getting data from row number 12
-                    var getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
-                    // Convert to string and check if it contains a comma
-                    const revisedCFYString = String(row["Revised CFY"]).replace(",", ""); // Replace comma with empty
-                    let revisedCFY = parseFloat(revisedCFYString); // Parse as float or default to 0
-
-                    let stsCFY = false
-                    let reason = "Pass Validation";
-                    let rowNumber = rowIndex + 12
-
-                    // Validate the amount according to the rules
-                    if (typeof revisedCFY !== 'number' || isNaN(revisedCFY)) {
-                        revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                        stsCFY = true
-                        reason = "Numeric only";
-                    }
-
-                    else if (revisedCFY < 0) {
-                        revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                        stsCFY = true
-                        reason = "Cannot be negative";
-                    }
-
-                    else if (revisedCFY % 100 !== 0 || !/^[0-9]+$/.test(revisedCFY.toString())) {
-                        revisedCFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                        stsCFY = true
-                        reason = "Nearest 100s, No decimal";
-                    }
-
-                    return {
-                            MINVIEW: getMissing["CC"],
-                            Budget: getMissing["Funding Pot"],
-                            Account:getMissing["Account"],
-                            //Account: row.Measures.split(" ")[0],
-                            Date: Yr,
-                            Version: "public.Revised",
-                            Amount: revisedCFY,
-                            //Status: stsCFY.toString(),
-                            //Remark: reason,
-                            //Row:rowNumber
-                    };
-                });
-            
-            
-                // Add the second set of data with NextYear and Estimated NFY
-                let extendedExportData = [];
-
-                // Add the second set of data with NextYear and Estimated NFY
-                extendedExportData = [
-                    ...exportData,
-                    ...parsedData.slice(10).map((row, rowIndex) => {
-                        const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
-                        // Convert to string and check if it contains a comma
-                        const estimatedNFYString = String(row["Estimated NFY"]).replace(",", ""); // Replace comma with empty
-                        let estimatedNFY = parseFloat(estimatedNFYString); // Parse as float or default to 0
-                        let stsNFY = false;
-                        let reason = "Pass Validation"
-                        let rowNumber = rowIndex + 12
-                    
-                        // Validate the amount according to the rules
-                        if (typeof estimatedNFY !== 'number' || isNaN(estimatedNFY)) {
-                            estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                            stsNFY = true
-                            reason = "Numeric only";
-                        }
-
-                        else if (estimatedNFY < 0 ) {
-                            estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                            stsNFY = true;
-                            reason = "Cannot be negative";
-                        }
-
-                        else if (estimatedNFY % 100 !== 0 || !/^[0-9]+$/.test(estimatedNFY.toString())) {
-                            estimatedNFY = 0; // If not a valid number or not ending with 00, set amount to 0
-                            stsNFY = true;
-                            reason = "Nearest 100s, No decimal";
-                        }
-
-
-                        return {
-                            MINVIEW: getMissing["CC"],
-                            Budget: getMissing["Funding Pot"],
-                            Account:getMissing["Account"],
-                            //Account: row.Measures.split(" ")[0],
-                            Date: Yr+1,
-                            Version: "public.Estimated",
-                            Amount: estimatedNFY,
-                            //Status: stsNFY.toString(),
-                            //Remark: reason,
-                            //Row:rowNumber
-                        };
-                    })
-                ];
-
-                sheetNames.push(sheetName);
-                sheetData[sheetName]=extendedExportData;
-                console.log("after transform result: ");
-
-                console.log(extendedExportData);
-
-                temp.setData(sheetData);
-                temp.setNames(sheetNames);
-                temp.handleRemove();
-                temp.dispatch('onFileUpload');
-            };
-
-            reader.onerror = function(ex) {
-                console.log(ex);
-            };
-      
-            //reader.readAsBinaryString(file);
-            reader.readAsArrayBuffer(file);
+              // Export Revised CFY
+              const exportData = parsedData.map((row) => {
+                const revisedCFYString = String(row["Revised CFY"]).replace(/,/g, "");
+                const revisedCFY = parseFloat(revisedCFYString) || 0;
+              
+                return {
+                  MINVIEW: row["CC"],
+                  Budget: row["Funding Pot"],
+                  Account: row["Account"],
+                  Date: Yr,
+                  Version: "public.Revised",
+                  Amount: revisedCFY
+                };
+              });
+              
+              const extendedExportData = [
+                ...exportData,
+                ...parsedData.map((row) => {
+                  const estimatedNFYString = String(row["Estimated NFY"]).replace(/,/g, "");
+                  const estimatedNFY = parseFloat(estimatedNFYString) || 0;
+              
+                  return {
+                    MINVIEW: row["CC"],
+                    Budget: row["Funding Pot"],
+                    Account: row["Account"],
+                    Date: Yr + 1,
+                    Version: "public.Estimated",
+                    Amount: estimatedNFY
+                  };
+                })
+              ];              
+        
+              // Save processed data
+              sheetNames.push(targetSheetName);
+              sheetData[targetSheetName] = extendedExportData;
+        
+              console.log("✅ Final transformed data:");
+              console.log(extendedExportData);
+            }
+        
+            // Call component methods
+            temp.setData(sheetData);
+            temp.setNames(sheetNames);
+            temp.handleRemove();
+            temp.dispatch('onFileUpload');
+          };
+        
+          reader.onerror = function(ex) {
+            console.log("❌ File read error:", ex);
+          };
+        
+          reader.readAsArrayBuffer(file);
         }
        
 
