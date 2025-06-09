@@ -1,0 +1,47 @@
+{
+    "eula": "",
+    "vendor": "Fai",
+    "license": "",
+    "id": "com.sap.sac.revenueUploadXLS",
+    "version": "1.0.0",
+    "name": "revenue upload xls",
+    "newInstancePrefix": "revenueUploadXLS",
+    "description": "A sample widget that allows users to upload a file include data transform and validation",
+    "imports": ["table", "input-controls","planning","datasource"],
+    "webcomponents": [
+      {
+        "kind": "main",
+        "tag": "revenue-upload-xls",
+        "url": "/revenueUploadXLS.js",
+        "integrity": "",
+        "ignoreIntegrity": true
+      }
+    ],
+    "properties": {  
+    },
+    "methods": {
+      "getData": {
+        "returnType": "Selection[]",
+        "description": "Returns the Data string.",
+        "parameters": [
+          {
+            "name": "sheetName",
+            "type": "string",
+            "description": "Name of sheet to retrieve data for"
+          }
+        ]
+      },  
+      "getSheetNames": {
+        "returnType": "string[]",
+        "description": "Returns the array of worksheet names."        
+      }, 
+      "showFileSelector": {
+         "description": "Displays file selector."
+      }         
+    },
+    "events": {
+      "onFileUpload": {
+        "description": "Called when a file has been successfully uploaded."
+      }
+    }
+  }
