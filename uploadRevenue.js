@@ -140,7 +140,7 @@ var getScriptPromisify = (src) => {
             const hasMacros = !!(workbook.vbaraw || workbook.vbaProject);
             console.log(hasMacros ? "✅ This workbook contains macros." : "❌ This workbook does NOT contain macros.");
         
-            const targetSheetName = "RevenueInput";
+            const targetSheetName = "RevenueProjection";
         
             // Declare sheet outside if-block
             let sheet = null;
