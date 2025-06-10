@@ -47,7 +47,7 @@ var getScriptPromisify = (src) => {
     </section>
     `;
 
-    class MainWebComponent extends HTMLElement{
+    class UploadRevenueXLSMain extends HTMLElement{
         constructor(){
             super();
 
@@ -264,5 +264,5 @@ var getScriptPromisify = (src) => {
 
     }
 
-    window.customElements.define('upload-revenue-xls',MainWebComponent);
+    window.customElements.define('upload-revenue-xls',UploadRevenueXLSMain);
 })()

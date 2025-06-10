@@ -2,17 +2,17 @@
     "eula": "",
     "vendor": "Fai",
     "license": "",
-    "id": "com.sap.sac.revenueUploadXLS",
+    "id": "com.sap.sac.uploadRevenueXLS",
     "version": "1.0.0",
-    "name": "revenue upload xls",
-    "newInstancePrefix": "revenueUploadXLS",
+    "name": "upload revenue xls",
+    "newInstancePrefix": "uploadRevenueXLS",
     "description": "A sample widget that allows users to upload a file include data transform and validation",
     "imports": ["table", "input-controls","planning","datasource"],
     "webcomponents": [
       {
         "kind": "main",
-        "tag": "revenue-upload-xls",
-        "url": "/revenueUploadXLS.js",
+        "tag": "upload-revenue-xls",
+        "url": "/uploadRevenueXLS.js",
         "integrity": "",
         "ignoreIntegrity": true
       }
