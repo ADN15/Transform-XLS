@@ -160,52 +160,67 @@ var getScriptPromisify = (src) => {
             }
         
             const a1Value = sheet['A1'] ? sheet['A1'].v : null;
-            const Yr = sheet['C7'] ? sheet['C7'].v : currentYear;
+            const Yr = currentYear;
         
             if (a1Value !== "iBudget3RevUploadFile") {
               console.log("❌ Error: The file is not valid");
               return;
             } else {
-              const parsedData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-              console.log("Raw parsed data:", parsedData);
+              const rawData = XLSX.utils.sheet_to_json(sheet, { header: 0, defval: "" });
+
+              // Row 0: Excel native headers (ignored)
+              // Row 1: Actual custom headers like ["CC", "Funding Pot", "Account", "Revised CFY", "Estimated NFY"]
+              const headerRow = rawData[0];
+
+              // Remaining rows: actual data
+              const dataRows = rawData.slice(1);
+
+              // Now transform each row into an object using the headerRow
+              const parsedData = dataRows.map((row) => {
+                const obj = {};
+                headerRow.forEach((header, i) => {
+                  obj[header] = row[i];
+                });
+                return obj;
+              });
+              console.log("raw data before transform :");
+              console.log(parsedData);
         
               const revisedAndEstimatedYears = [];
               revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear - 1 : currentYear);
               revisedAndEstimatedYears.push(currentMonth <= 3 ? currentYear : currentYear + 1);
-        
-              // Get export data from row 12 (index 11)
-              const exportData = parsedData.slice(10).map((row, rowIndex) => {
-                const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
+
+              // Export Revised CFY
+              const exportData = parsedData.map((row) => {
                 const revisedCFYString = String(row["Revised CFY"]).replace(/,/g, "");
                 const revisedCFY = parseFloat(revisedCFYString) || 0;
-        
+              
                 return {
-                  MINVIEW: getMissing["CC"],
-                  Budget: getMissing["Funding Pot"],
-                  Account: getMissing["Account"],
-                  Date: Yr,
+                  MINVIEW: row["CC"],
+                  //Budget: row["Funding Pot"],
+                  Account: row["Account"],
+                  //Date: Yr,
                   Version: "public.Revised",
                   Amount: revisedCFY
                 };
               });
-        
+              
               const extendedExportData = [
                 ...exportData,
-                ...parsedData.slice(10).map((row, rowIndex) => {
-                  const getMissing = XLSX.utils.sheet_to_json(sheet, { range: 11, defval: "" })[rowIndex];
+                ...parsedData.map((row) => {
                   const estimatedNFYString = String(row["Estimated NFY"]).replace(/,/g, "");
                   const estimatedNFY = parseFloat(estimatedNFYString) || 0;
-        
+              
                   return {
-                    MINVIEW: getMissing["CC"],
-                    Budget: getMissing["Funding Pot"],
-                    Account: getMissing["Account"],
-                    Date: Yr + 1,
+                    MINVIEW: row["CC"],
+                    //Budget: row["Funding Pot"],
+                    Account: row["Account"],
+                    //Date: Yr + 1,
                     Version: "public.Estimated",
                     Amount: estimatedNFY
                   };
                 })
-              ];
+              ];              
         
               // Save processed data
               sheetNames.push(targetSheetName);
